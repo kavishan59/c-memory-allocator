@@ -2,7 +2,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-
 #define BLOCK_SIZE 12 
 
 void *base=NULL;  //adress of start of the heap in our virtual memory
@@ -92,4 +91,20 @@ void *ft_malloc(size_t size)
   }
   return (b->data);
 }
+
+void *calloc(size_t number, size_t size)
+{
+  size_t *new;
+  size_t s4,i;
+  
+  new = ft_malloc(number * size);
+  if (new)
+  {
+    s4 = ((number * size) + 3) & ~3;   //align data to be multiple of 4
+    for (i = 0; i < s4 ;i++)
+      new[i] = 0;
+  }
+  return (new);
+}
+
 
