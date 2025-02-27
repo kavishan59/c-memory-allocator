@@ -1,20 +1,8 @@
-#include <stddef.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <stdio.h>
+#include "memory_allocator.h"
 
-#define BLOCK_SIZE sizeof(t_block) 
 
+t_block *fusion(t_block *b);
 void *base=NULL;  //adress of start of the heap in our virtual memory
-
-typedef struct s_block {
-  size_t size; 
-  struct s_block *next; // next chunk of memory block (meta-data + requested size)
-  struct s_block *prev;
-  int free;
-  void *ptr; //poin to the data block , used to check if the addr is allocated memory or not
-  char data[1]; //trick to access the first byte of the memory allocated
-} t_block;
 
 
 //find the next available chunk of memory
@@ -66,6 +54,8 @@ void split_block(t_block *b, size_t s)
 
   b->size = s;
   b->next = new;
+  if (new->next && new->next->next->free)
+    fusion(new);
 }
 
 
@@ -189,6 +179,55 @@ void ft_free(void *p)
   }
 }
 
+//copy data from block to block , needed by realloc
+void copy_block(t_block *src, t_block *dst)
+{
+  char *sdata,*ddata;
+  size_t i;
+  sdata = (char *)src->ptr;
+  ddata = (char *)dst->ptr;
+  for (i = 0; i < src->size && i< dst->size; i++)
+  {
+    ddata[i] = sdata[i];
+  }
+}
+
+void *ft_realloc(void *p, size_t size)
+{
+  size_t s;
+  t_block *b,*new;
+  void *newp;  
+  if (!p)
+    return(ft_malloc(size));
+  if (!check_valid_addr(p))
+    return NULL;
+  if (size == 0)
+  {
+    ft_free(p);
+    return NULL;
+  }
+
+  s = (size +3) & ~3; //align to 4 bytes
+  b = get_block(p);
+ 
+  //case 1 : shrink in place
+  if (b->size >= s)
+  { 
+    if(b->size - s >= (BLOCK_SIZE + 4)) //split if there is enough space
+      split_block(b, s);
+    return p;
+  }
+  
+  //case 2 : size too big
+  newp = ft_malloc(s);
+  if(!newp)
+    return (NULL);
+  new = get_block(newp);
+  copy_block(b,new);
+  ft_free(p);
+  return (newp);
+}
+
 //debug function
 void print_heap()
 {
@@ -201,5 +240,4 @@ void print_heap()
     }
     printf("NULL\n");
 }
-
 
